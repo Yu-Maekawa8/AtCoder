@@ -1,0 +1,35 @@
+/**
+*Atcoder ABC 374
+*C- Separated Lunch
+*/
+
+import java.util.*;
+public class Main{
+    public static void main(String [] args){
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        int[] number = new int[20];
+        int atotal = 0;
+        int btotal = 0;
+        int ans = Integer.MAX_VALUE;
+        
+        for(int i = 0 ; i < n ; i++){ //配列格納
+          number[i] = sc.nextInt();
+        }
+        
+        for(int i = 0 ; i < (1<<n) ; i++){
+            atotal = 0;
+            btotal = 0;
+            for(int j = 0 ; j < n ; j++){
+              if((1 & i >> j) == 1){
+                atotal += number[j];
+              }else{
+                btotal += number[j];
+              }
+            }
+            int maxN = Math.max(atotal,btotal);
+            ans = Math.min(maxN,ans);
+        }
+        System.out.println(ans);
+    }
+}    
