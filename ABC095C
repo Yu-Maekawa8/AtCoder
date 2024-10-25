@@ -1,4 +1,6 @@
 /*
+*Atcoder ABC095 C Half and Half
+*
 *失敗例  if文で両方の条件そろってる可能性があり全探索できていない
 */
 
