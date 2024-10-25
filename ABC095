@@ -1,0 +1,45 @@
+/*
+*失敗例  if文で両方の条件そろってる可能性があり全探索できていない
+*/
+
+import java.util.*;
+public class Main{
+  public static void main(String[] args){
+    Scanner sc = new Scanner(System.in);
+    final int APRICE = sc.nextInt();
+    final int BPRICE = sc.nextInt();
+    final int ABPRICE = sc.nextInt();
+    final int AX = sc.nextInt();
+    final int BY = sc.nextInt();
+    
+    int acount = 0;
+    int bcount = 0;
+    int abcount = 0;
+    long total = 0;
+    
+    if(ABPRICE*2 <= APRICE && ABPRICE*2 <= BPRICE){
+     
+        int temp = Math.max(AX,BY);
+        abcount = temp;
+        total +=  abcount*ABPRICE*2;
+
+    }else if(ABPRICE*2 <= APRICE + BPRICE){
+        int temp = Math.min(AX,BY);
+        abcount = temp;
+        total += abcount*ABPRICE*2;
+        
+      if(acount < AX){
+        acount += AX - abcount;
+        total += acount*APRICE;
+      }else if(bcount < BY){
+        bcount += BY - abcount;
+        total += bcount*BPRICE;
+      }else{}
+    }else{
+      acount += AX;
+      bcount += BY;
+      total = acount*APRICE + bcount*BPRICE;
+    }
+    System.out.println(total);
+  }
+}
