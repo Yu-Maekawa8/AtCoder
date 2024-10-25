@@ -48,6 +48,9 @@ public class Main{
 
 /*
 *成功例 単純化したもの(全探索）
+*1.abピザのみ注文 
+*2.abピザとaかbピザ注文
+*3.a,bピザのみ注文
 */
 import java.util.*;
 public class Main{
@@ -59,12 +62,40 @@ public class Main{
     final int AX = sc.nextInt();
     final int BY = sc.nextInt();
     
-    int acount = 0;
-    int bcount = 0;
-    int abcount = 0;
-    long total = 0;
+    int aCount = 0;
+    int bCount = 0;
+    int abCount = 0;
     
+    int ans1 = 0;
+    int ans2 = 0;
+    int ans3 = 0;
     
+     
+    abCount = Math.max(AX,BY);
+    
+    ans1 =  abCount*ABPRICE*2;
+
+    int temp2 = Math.min(AX,BY);
+    abCount = temp2;
+    ans2 += abCount*ABPRICE*2;
+        
+    if(AX > BY){
+      aCount = AX - abCount;
+      ans2 += aCount*APRICE;
+    }else{
+      bCount = BY - abCount;
+      ans2 += bCount*BPRICE;
+    }
+    
+      aCount = 0;
+      bCount = 0;
+      
+      aCount = AX;
+      bCount = BY;
+      ans3 = aCount*APRICE + bCount*BPRICE;
+      
+      int total = Math.min(Math.min(ans1,ans2),ans3);
+      System.out.println(total);
   }
 }
 
