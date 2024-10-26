@@ -1,0 +1,72 @@
+/**
+*ABC104 C All grean
+* 解答製作中
+*/
+import java.util.*;
+public class Main{
+  public static void main(String[] args){
+    Scanner sc = new Scanner(System.in);
+    int kind = sc.nextInt();
+    int object = sc.nextInt();
+    
+    int[] quan = new int[kind];
+    int[] cb = new int[kind]; 
+    long[] ts = new long[kind];
+    
+    int index = 0;
+    int tsFlag = 0;
+    int quanMin = 99999999;
+    
+    int total = 0;
+    int count = 0;
+    
+    
+    for(int i = 0 ; i < kind ; i++){
+      quan[i] = sc.nextInt();
+      cb[i] = sc.nextInt();
+      ts[i] = 100*(i+1)*quan[i]+cb[i];
+      if(ts[i] > object){
+        tsFlag =1;
+        if(quanMin > quan[i]){
+          quanMin = quan[i];
+          total = (i+1)*100+cb[i];
+          index = i;
+        }
+      }
+    }
+    
+    if(tsFlag == 0){
+      for(int i = kind-1 ; i >= 0 ; i--){
+        total += ts[i];
+        count += quan[i];
+        if(total >= object){
+          if(total >= object + (i+1)*100+cb[i]){
+            count--;
+            total -= (i+1)*100+cb[i];
+            quanMin = abjustment(total , object , i, count);
+          }
+        }
+      }
+    }else{
+      count = quanMin;
+      quanMin = abjustment(total , object , index , count);
+    }
+
+    System.out.println(quanMin);
+    
+  }
+  
+  static int abjustment(int total , int object , int i, int count ){
+    int quanMin = count;
+    while(true){
+        if(total >= object + (i+1)*100){
+            count--;
+            total -=  (i+1)*100;
+        }else{
+            quanMin = count;
+            break;
+        }
+    }
+    return quanMin;
+  }
+}  
