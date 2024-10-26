@@ -1,4 +1,6 @@
 /**
+*不足知識　動的計画法
+*
 *ABC104 C All grean
 * 解答製作中
 */
@@ -70,3 +72,102 @@ public class Main{
     return quanMin;
   }
 }  
+
+/**
+* 2回目　乱打　　　ac x7  wa x16 re x1
+*/
+import java.util.*;
+public class Main{
+  public static void main(String[] args){
+    Scanner sc = new Scanner(System.in);
+    int kind = sc.nextInt();
+    int object = sc.nextInt();
+    
+    int[] quan = new int[kind];
+    int[] cb = new int[kind]; 
+    long[] ts = new long[kind];
+    
+    int index = 0;
+    int tsFlag = 0;
+    int quanMin = 99999999;
+    
+    long total = 0;
+    int count = 0;
+    
+    int[] check = new int[kind];
+    int ch = 0;
+    
+    for(int i = 0 ; i < kind ; i++){
+      quan[i] = sc.nextInt();
+      cb[i] = sc.nextInt();
+      ts[i] = 100*(i+1)*quan[i]+cb[i];
+      if(ts[i] > object){
+        tsFlag =1;
+        if(quanMin > quan[i]){
+          quanMin = quan[i];
+          index = i;
+          check[ch] = i; 
+          ch++;
+        }
+      }
+    }
+    
+    if(tsFlag == 0){
+      for(int i = kind-1 ; i >= 0 ; i--){
+        total += ts[i];
+        count += quan[i];
+        if(total >= object){
+          if(total >= object + (i+1)*100+cb[i]){
+            count--;
+            total -= (i+1)*100+cb[i];
+            while(true){
+              if(total >= object + (i+1)*100){
+                count--;
+                total -=  (i+1)*100;
+              }else{
+                quanMin = count;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }else{
+      total = ts[index];
+      int i = index;
+      count = quanMin;
+      if(total >= object + (i+1)*100+cb[i]){
+            count--;
+            total -= (i+1)*100+cb[i];
+            while(true){
+              if(total >= object + (i+1)*100){
+                count--;
+                total -=  (i+1)*100;
+              }else{
+                quanMin = count;
+                break;
+              }
+            }
+      }else{
+        for(int k = 1 ; k <= ch ; k++){
+          total = ts[k];
+          count = quan[k];
+          if(total >= object + (k+1)*100+cb[k]){
+            count--;
+            total -= (i+1)*100+cb[k];
+            while(true){
+              if(total >= object + (k+1)*100){
+                count--;
+                total -=  (k+1)*100;
+              }else{
+                quanMin = count;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    System.out.println(quanMin);
+  }
+}
