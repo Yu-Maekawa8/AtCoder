@@ -1,3 +1,5 @@
+// 3～50行目は　コンテスト時の解答（判定:WA）　51行目以降から　ACした解答
+
 import java.util.*;
 
 public class Main {
