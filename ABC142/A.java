@@ -12,9 +12,8 @@ public class Main {
         try (Scanner sc = new Scanner(System.in)) {
             double d = sc.nextDouble();
             double cnt = d % 2;
-
-            System.out.println(((d/2)+cnt)/d);
-
+            
+            System.out.println((((int)d/2)+cnt)/d);
         }
     }
 }
