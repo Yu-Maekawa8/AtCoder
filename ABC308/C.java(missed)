@@ -1,0 +1,39 @@
+/*
+* 現在ミスっている
+*
+*/
+
+import java.util.*;
+import java.math.*;
+
+public class Main {
+    public static void main(String[] args) {
+        try (Scanner sc = new Scanner(System.in)) {
+            int n = sc.nextInt();
+            BigDecimal[][] p = new BigDecimal[n][2];
+            BigDecimal[][] ans = new BigDecimal[n][2];
+
+            for (int i = 0; i < n; i++) {
+                p[i][0] = sc.nextBigDecimal();
+                p[i][1] = sc.nextBigDecimal();
+            }
+
+            for (int i = 0; i < n; i++) {
+                ans[i][0] = p[i][0].divide(p[i][0].add(p[i][1]), 10, RoundingMode.HALF_UP);
+                ans[i][1] = new BigDecimal(i + 1);
+            }
+
+            BigDecimal max = BigDecimal.ZERO;
+            int idx = 0;
+
+            for (int i = 0; i < n; i++) {
+                if (ans[i][0].compareTo(max) > 0) {
+                    max = ans[i][0];
+                    idx = i;
+                }
+            }
+
+            
+        }
+    }
+}
