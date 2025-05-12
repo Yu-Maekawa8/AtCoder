@@ -1,4 +1,11 @@
-  import java.util.*;
+/*
+*after contests のテスト2ケース通らない
+*
+*
+*/
+
+
+import java.util.*;
 import java.util.stream.*;
 
 public class Main {
@@ -9,6 +16,8 @@ public class Main {
             HashSet<Integer> set = new HashSet<>(); // 重複削除用
             for (int i = 0; i < ar.length; i++) {
                 ar[i] = str.charAt(i);
+                
+                
             }
 
             List<Integer> list = Arrays.stream(ar).boxed().collect(Collectors.toList());
@@ -17,7 +26,7 @@ public class Main {
             for (int i = 0; i < list.size(); i++) {
                 Integer ch = list.get(i);
                 if (ch >= 'a' && ch <= 'z') {
-                    if(set.contains(ar[i]) && ar[i] != '(' && ar[i] != ')') {
+                    if(set.contains(ar[i]) ) {
                         System.out.println("No");
                         return;
                     } else {
@@ -33,6 +42,7 @@ public class Main {
                         System.out.println("No");
                         return;
                     }
+                    set.clear();
                 } else if (ch == '(') {
                     list2.add(i);
                 }
