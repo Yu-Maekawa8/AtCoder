@@ -14,7 +14,10 @@ q.offer(1);         // 追加（末尾）
 int val = q.poll(); // 取り出し（先頭）
 int peek = q.peek(); // 先頭確認
 ```
-##✅ Deque（両端対応／高速スタック代替）
+
+
+## ✅ Deque（両端対応／高速スタック代替）
+
 ```java
 import java.util.*;
 
@@ -28,7 +31,9 @@ int l = dq.removeLast();  // 末尾取り出し
 dq.push(3);         // = addFirst
 int s = dq.pop();   // = removeFirst
 ```
-##✅ Stack（非推奨：古い）
+
+## ✅ Stack（非推奨：古い）
+
 ```java
 import java.util.*;
 
