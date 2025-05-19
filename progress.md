@@ -1,9 +1,14 @@
 ## ✅ AtCoder ABC進捗一覧（A〜D問題）
 
-### 凡例：
+<details>
+<summary>凡例を表示</summary>
+
+
 - ✅：すべてのテストケースにAC（Accepted）
 - ❌：提出済みだが一部テストケース未AC（例：`A_no.java` など）
 - 🚫：未実装（コードが存在しない）
+
+</details>
 
 - [ ] ABC142
   - [x] A 
