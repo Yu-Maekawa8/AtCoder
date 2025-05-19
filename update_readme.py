@@ -23,14 +23,15 @@ def generate_progress(base_path='.', output_file='progress.md'):
 
     # Markdown 出力
     lines = ["## ✅ AtCoder ABC進捗一覧（A〜D問題）\n"]
+    symbol_map = {"❌": "❌", "☐": "🚫"}
     for name, status in contests:
         if all(v == "✅" for v in status.values()):
             lines.append(f"- [x] {name}（A〜D）")
         else:
             lines.append(f"- [ ] {name}")
             for p in ['a', 'b', 'c', 'd']:
-                symbol = "x" if status[p] == "✅" else " "  # GitHubの [x] or [ ]
-                label = f"（{status[p]}）" if status[p] != "✅" else ""
+                symbol = "x" if status[p] == "✅" else " "
+                label = f"（{symbol_map.get(status[p], '')}）" if status[p] != "✅" else ""
                 lines.append(f"  - [{symbol}] {p.upper()} {label}")
 
     with open(os.path.join(base_path, output_file), 'w', encoding='utf-8') as f:
