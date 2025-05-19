@@ -1,0 +1,35 @@
+name: Update README
+
+on:
+  push:
+    paths:
+      - 'ABC*/**'
+      - '.github/workflows/update_readme.yml'
+  schedule:
+    - cron: '0 0 * * *'  # 毎日 0:00 に自動実行
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt || true
+
+      - name: Run script
+        run: python update_readme.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --quiet || git commit -m "Update README with ABC progress"
+          git push
