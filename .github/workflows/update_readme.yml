@@ -10,6 +10,9 @@ on:
     - cron: '0 0 * * *'       # 毎日 0:00 に実行
   workflow_dispatch:          # 手動実行も許可
 
+permissions:
+  contents: write             #push権限付与
+
 jobs:
   update:
     runs-on: ubuntu-latest
