@@ -60,6 +60,7 @@ ABC/
 | ⏳ 未着手   | フォルダのみ作成済               |
 
 ※詳細な進捗は GitHub Projects または issue を参照。
+※AtCoder Problems で解いたものとGitHubで格納しているコード数が異なることがあります(2025/4以前のGithubを本格的に使い始める前に解いたやつが大半なため)
 
 📊 [ABC進捗一覧はこちら](./progress.md)
 
