@@ -21,8 +21,15 @@ def generate_progress(base_path='.', output_file='progress.md'):
 
             contests.append((folder.upper(), status))
 
-    # Markdown 出力
-    lines = ["## ✅ AtCoder ABC進捗一覧（A〜D問題）\n"]
+    # Markdownの出力準備
+    lines = [
+        "## ✅ AtCoder ABC進捗一覧（A〜D問題）\n",
+        "### 凡例：",
+        "- ✅：すべてのテストケースにAC（Accepted）",
+        "- ❌：提出済みだが一部テストケース未AC（例：`A_no.java` など）",
+        "- 🚫：未実装（コードが存在しない）\n"
+    ]
+
     symbol_map = {"❌": "❌", "☐": "🚫"}
     for name, status in contests:
         if all(v == "✅" for v in status.values()):
