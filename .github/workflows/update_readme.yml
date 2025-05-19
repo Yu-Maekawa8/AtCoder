@@ -1,12 +1,14 @@
-name: Update README
+name: Update Progress
 
 on:
   push:
     paths:
-      - 'ABC*/**'
-      - '.github/workflows/update_readme.yml'
+      - 'abc*/**'
+      - 'update_progress.py'
+      - '.github/workflows/update_progress.yml'
   schedule:
-    - cron: '0 0 * * *'  # 毎日 0:00 に自動実行
+    - cron: '0 0 * * *'　　　　# 毎日 0:00 に実行
+  workflow_dispatch:        　# 手動実行も許可
 
 jobs:
   update:
@@ -14,22 +16,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
+        with:
+          persist-credentials: false  # ← これが重要
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt || true
-
       - name: Run script
-        run: python update_readme.py
+        run: python update_progress.py
 
-      - name: Commit and push
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ← GitHubが自動で提供
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git diff --cached --quiet || git commit -m "Update README with ABC progress"
-          git push
+          git add progress.md
+          git diff --cached --quiet || git commit -m "Update ABC progress checklist"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
