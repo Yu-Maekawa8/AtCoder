@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'abc*/**'
-      - 'update_progress.py'
+      - 'update_readme.py'
       - '.github/workflows/update_progress.yml'
   schedule:
     - cron: '0 0 * * *'       # 毎日 0:00 に実行
@@ -25,7 +25,7 @@ jobs:
           python-version: '3.x'
 
       - name: Run script
-        run: python update_progress.py
+        run: python update_readme.py
 
       - name: Commit and push changes
         env:
