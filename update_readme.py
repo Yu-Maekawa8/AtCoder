@@ -1,57 +1,51 @@
-import os  # OS操作（ディレクトリ走査など）に必要
-import re  # 正規表現を使うために必要
+import os  # OS操作用モジュール（フォルダ内のファイル一覧取得など）
+import re  # 正規表現モジュール（フォルダ名の形式チェック用）
 
 def generate_progress(base_path='.', output_file='progress.md'):
-    contests = []  # ABCコンテストごとの進捗情報を格納するリスト
+    contests = []  # コンテストごとの進捗状況を格納するリスト
 
-    for folder in sorted(os.listdir(base_path)):  # 指定フォルダ内のすべてのディレクトリを取得
-        if re.match(r"ABC\d{3}", folder, re.IGNORECASE):  # "ABCxxx" 形式にマッチするもののみ対象（大文字小文字問わず）
-            problems = ['a', 'b', 'c', 'd']  # A〜D問題を対象
-            path = os.path.join(base_path, folder)  # コンテストフォルダへのパスを作成
-            files_lower = [f.lower() for f in os.listdir(path)]  # ファイル名をすべて小文字にして保持（大文字小文字を無視するため）
+    for folder in sorted(os.listdir(base_path)):  # フォルダをアルファベット順に走査
+        if re.match(r"ABC\d{3}", folder, re.IGNORECASE):  # フォルダ名がABC + 数字3桁かどうかを確認
+            problems = ['a', 'b', 'c', 'd']  # 対象問題：A～D
+            path = os.path.join(base_path, folder)  # 対象フォルダのパス作成
+            files_lower = [f.lower() for f in os.listdir(path)]  # ファイル名をすべて小文字で取得（大文字小文字を無視）
 
-            status = {}  # 各問題の状態を格納する辞書
-            for p in problems:
-                # 指定問題に該当するファイルを取得（例："a.java", "a_no.java"など）
-                problem_files = [f for f in files_lower if f.startswith(p)]
+            status = {}  # 各問題ごとのステータス（✅❌🚫）を格納
 
-                # "no" が含まれていれば未AC、そうでなければAC済み、存在しなければ未実装
-                if any("no" in f for f in problem_files):
-                    status[p] = "❌"  # 実装済みだが未AC（例: a_no.java）
-                elif any(f == f"{p}.java" for f in problem_files):
-                    status[p] = "✅"  # AC済み（例: a.java）
+            for p in problems:  # A〜Dそれぞれの問題について
+                problem_files = [f for f in files_lower if f.startswith(p)]  # 問題名で始まるファイルを抽出
+                if any("no" in f for f in problem_files):  # 「no」がファイル名に含まれていれば未AC
+                    status[p] = "❌"  # 実装済みだがACではない（例：D_no.java）
+                elif f"{p}.java" in problem_files:  # 通常のファイル名（例：a.java）があればAC済み
+                    status[p] = "✅"  # AC通過済み
                 else:
-                    status[p] = "☐"  # 未実装
+                    status[p] = "🚫"  # ファイルが見つからない＝未提出
 
-            contests.append((folder.upper(), status))  # フォルダ名を大文字化して格納
+            contests.append((folder.upper(), status))  # コンテスト名とステータスを保存（フォルダ名は大文字に統一）
 
-    # Markdown出力の準備
+    # Markdown 出力部分
     lines = [
-        "## ✅ AtCoder ABC進捗一覧（A〜D問題）\n",
-        "<details>\n<summary>凡例を表示</summary>\n",
-        "\n- ✅：すべてのテストケースにAC（Accepted）",
-        "- ❌：提出済みだが一部テストケース未AC（例：`A_no.java` など）",
-        "- 🚫：未実装（コードが存在しない）\n",
-        "</details>\n"
+        "## ✅ AtCoder ABC進捗一覧（A〜D問題）\n",  # タイトル行
+        "<details>\n<summary>凡例</summary>\n\n",  # 折りたたみ可能な凡例セクション開始
+        "- ✅：AC（すべて通過）\n",                # 意味一覧（AC）
+        "- ❌：提出済みだがACでない（例：D_no.java）\n",  # 意味一覧（未AC）
+        "- 🚫：未提出\n\n",                         # 意味一覧（未提出）
+        "</details>\n"  # 折りたたみ終了
     ]
 
-    symbol_map = {"❌": "❌", "☐": "🚫"}  # 表示用のシンボルマップ（☐→🚫）
-
-    for name, status in contests:
-        # すべてAC済みなら [x] をつける
-        if all(v == "✅" for v in status.values()):
-            lines.append(f"- [x] {name}（A〜D）")
+    for name, status in contests:  # 各コンテストについて
+        if all(v == "✅" for v in status.values()):  # A〜DすべてAC済みの場合
+            lines.append(f"- ✅ {name}（A〜D）")  # チェック付きで表示
         else:
-            lines.append(f"- [ ] {name}")  # 未完了ならチェックなし
-            for p in ['a', 'b', 'c', 'd']:
-                symbol = "x" if status[p] == "✅" else " "  # チェックマーク用
-                label = f"（{symbol_map.get(status[p], '')}）" if status[p] != "✅" else ""  # 凡例シンボル追加
-                lines.append(f"  - [{symbol}] {p.upper()} {label}")  # 個別問題の行を追加
+            lines.append(f"- 🚧 {name}")  # 進捗中の印として🚧
+            for p in ['a', 'b', 'c', 'd']:  # 各問題について個別にマークを付ける
+                label = status[p]  # ✅ or ❌ or 🚫
+                lines.append(f"  - {p.upper()}：{label}")  # 例：  - A：✅
 
-    # ファイルに書き出す
+    # 最終的に progress.md に書き出し
     with open(os.path.join(base_path, output_file), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines))
+        f.write('\n'.join(lines))  # 改行で区切って出力
 
-# スクリプトを直接実行したときのみ generate_progress を呼び出す
+# スクリプトが直接実行されたときに実行される
 if __name__ == "__main__":
     generate_progress()
