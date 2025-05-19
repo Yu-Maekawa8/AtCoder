@@ -4,13 +4,15 @@ import re
 def generate_progress(base_path='.', output_file='progress.md'):
     contests = []
     for folder in sorted(os.listdir(base_path)):
-        if re.match(r"abc\d{3}", folder):
+        if re.match(r"ABC\d{3}", folder, re.IGNORECASE):
             problems = ['a', 'b', 'c', 'd']
             path = os.path.join(base_path, folder)
-            solved = {p: any(
-                os.path.isfile(os.path.join(path, f"{p}.{ext}"))
-                for ext in ['java']
-            ) for p in problems}
+            # ファイル一覧をすべて小文字で保持（拡張子含めて）
+            files_lower = [f.lower() for f in os.listdir(path)]
+            solved = {
+                p: f"{p}.java" in files_lower
+                for p in problems
+            }
             contests.append((folder.upper(), solved))
 
     # Markdown 出力
