@@ -1,4 +1,4 @@
-# AtCoder Beginner Contest A〜D問題 解答リポジトリ（ABC126〜ABC404）
+# AtCoder Beginner Contest A〜D問題 解答リポジトリ（ABC126〜）
 
 このリポジトリは、AtCoder Beginner Contest（ABC）における **A〜D問題の解答コード**を収録したものです。  
 対象は **ABC126 〜 ** です。
