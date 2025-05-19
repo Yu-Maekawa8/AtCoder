@@ -3,55 +3,51 @@ import re  # 正規表現モジュール（フォルダ名の形式チェック�
 
 # プログレス表を生成するメイン関数
 def generate_progress(base_path='.', output_file='progress.md'):
-    contests = []  # コンテストごとのデータ（状態・名前・問題ごとの進捗）を保存するリスト
-    ac_counts = {'a': 0, 'b': 0, 'c': 0, 'd': 0, 'full': 0}  # A〜DのAC数と、全完了コンテスト数を集計する辞書
+    contests = []  # コンテストデータを格納
+    ac_counts = {'a': 0, 'b': 0, 'c': 0, 'd': 0}  # 各問題のAC数をカウント
+    full_ac_count = 0  # コンテスト全AC数をカウント
+    total_contest_count = 0  # コンテスト総数
 
-    # フォルダ一覧を調べて、ABC形式（例: ABC123）にマッチするものだけ処理
     for folder in sorted(os.listdir(base_path)):
-        if re.match(r"ABC\d{3}", folder, re.IGNORECASE):  # フォルダ名がABC形式かどうかを判定
-            problems = ['a', 'b', 'c', 'd']  # 対象の問題：A〜D
-            path = os.path.join(base_path, folder)  # コンテストフォルダのフルパスを作成
-            files = os.listdir(path)  # フォルダ内のファイル一覧を取得
-            status = {}  # 各問題の進捗状態を記録する辞書
-
-            # 各問題（a〜d）について状態を判定
+        if re.match(r"ABC\d{3}", folder, re.IGNORECASE):  # ABC形式のみ処理
+            problems = ['a', 'b', 'c', 'd']
+            path = os.path.join(base_path, folder)
+            files = os.listdir(path)
+            status = {}
             for p in problems:
-                matched_files = [f for f in files if f.lower().startswith(p)]  # 該当するファイルを抽出
-                status[p] = '🚫'  # 初期状態は「未実装」
-
+                matched_files = [f for f in files if f.lower().startswith(p)]
+                status[p] = '🚫'  # デフォルトは未実装
                 for fname in matched_files:
-                    full_path = os.path.join(path, fname)  # ファイルのフルパスを取得
-
+                    full_path = os.path.join(path, fname)
                     if os.path.getsize(full_path) == 0:
-                        continue  # 空ファイルは未実装としてスキップ
-
+                        continue
                     if 'no' in fname.lower():
-                        status[p] = '❌'  # ファイル名に "no" を含む → 実装済だが未AC
+                        status[p] = '❌'
                     else:
-                        status[p] = '✅'  # 中身があり "no" を含まない → AC済み
-                        break  # ✅ が見つかったらそれを優先して終了
+                        status[p] = '✅'
+                        break  # ✅が見つかれば優先
 
-            symbols = list(status.values())  # 状態（✅, ❌, 🚫）の一覧を取得
-
-            # コンテスト全体の進捗ステータスを判定
+            # 状態判定
+            symbols = list(status.values())
             if all(s == '🚫' for s in symbols):
-                overall = '⌛'  # 全部未実装 → 未着手
+                overall = '⌛'  # 全未実装
             elif all(s == '✅' for s in symbols):
-                overall = '✅'  # 全部AC済み → 完了
-                ac_counts['full'] += 1  # 全完了コンテスト数を加算
+                overall = '✅'  # 全部AC済み
+                full_ac_count += 1
             else:
-                overall = '🔄'  # 一部解答済み → 作業中
+                overall = '🔄'  # 一部解答中
 
-            # ✅の数を問題ごとに加算
+            total_contest_count += 1  # コンテスト数カウント
+
+            # AC数を加算
             for p in problems:
                 if status[p] == '✅':
                     ac_counts[p] += 1
 
-            # コンテストごとの結果を保存
             contests.append((overall, folder.upper(), status))
 
-    # Markdown出力用の行を準備（凡例などを記載）
-        lines = [
+    # Markdown出力行の生成
+    lines = [
         "### 凡例\n",
         "- ABCD各問題：",
         "  - ✅ = AC済み",
@@ -63,28 +59,30 @@ def generate_progress(base_path='.', output_file='progress.md'):
         "  - 🔄 作業中：一部問題の解答・整理進行中",
         "  - ⌛ 未着手：フォルダのみ作成済（またはすべて空ファイル）",
         "",
-        "### 現在のAC数 ✅",  # 目立たせる見出し
+        "### 🧮 現在の進捗状況",
+        f"- ✅ A問題AC数：{ac_counts['a']}",
+        f"- ✅ B問題AC数：{ac_counts['b']}",
+        f"- ✅ C問題AC数：{ac_counts['c']}",
+        f"- ✅ D問題AC数：{ac_counts['d']}",
+        f"- ✅ 全問題AC済みのコンテスト数：{full_ac_count}",
+        f"- 📦 計コンテスト数：{total_contest_count}",
         "",
-        "| 問題 | A | B | C | D | 全完了コンテスト |",  # 表のヘッダー
-        "|------|---|---|---|---|------------------|",  # 区切り
-        f"| AC数 | {ac_counts['a']} | {ac_counts['b']} | {ac_counts['c']} | {ac_counts['d']} | {ac_counts['full']} |",  # データ行
-        "",
-        "| 状態 | コンテスト | A | B | C | D |",  # 通常の進捗表に戻る
+        "| 状態 | コンテスト | A | B | C | D |",
         "|------|------------|---|---|---|---|"
     ]
 
-
-    # コンテストごとの進捗をMarkdown表の行として追加
+    # コンテスト行を追加（⌛のものはABCDを表示しない）
     for mark, name, status in contests:
-        if mark == '⌛':  # 未着手のときは A〜D を「-」で表示
+        if mark == '⌛':
             lines.append(f"| {mark} | {name} | - | - | - | - |")
-        else:  # それ以外は通常通り表示
-            lines.append(f"| {mark} | {name} | {status['a']} | {status['b']} | {status['c']} | {status['d']} |")
+        else:
+            row = f"| {mark} | {name} | {status['a']} | {status['b']} | {status['c']} | {status['d']} |"
+            lines.append(row)
 
-    # 最終的に progress.md ファイルとして保存
+    # ファイル書き出し
     with open(os.path.join(base_path, output_file), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines))  # 各行を改行で結合して書き込む
+        f.write('\n'.join(lines))
 
-# このスクリプトが直接実行されたときのみ実行
+# スクリプトが直接実行されたときのみ動作
 if __name__ == "__main__":
     generate_progress()
