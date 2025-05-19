@@ -41,8 +41,8 @@ def generate_progress(base_path='.', output_file='progress.md'):
 
     # 各コンテストの進捗を表に追記
     for name, status in contests:
-        # すべての問題がACされていれば ✅、そうでなければ 🚧
-        contest_mark = "✅" if all(v == "✅" for v in status.values()) else "🚧"
+        # すべての問題がACされていれば ✅、そうでなければ 🔄
+        contest_mark = "✅" if all(v == "✅" for v in status.values()) else "🔄"
 
         # 1行分のMarkdown表記を生成
         row = f"| {contest_mark} | {name} | {status['a']} | {status['b']} | {status['c']} | {status['d']} |"
