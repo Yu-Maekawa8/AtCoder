@@ -7,24 +7,31 @@ def generate_progress(base_path='.', output_file='progress.md'):
         if re.match(r"ABC\d{3}", folder, re.IGNORECASE):
             problems = ['a', 'b', 'c', 'd']
             path = os.path.join(base_path, folder)
-            # ファイル一覧をすべて小文字で保持（拡張子含めて）
             files_lower = [f.lower() for f in os.listdir(path)]
-            solved = {
-                p: f"{p}.java" in files_lower
-                for p in problems
-            }
-            contests.append((folder.upper(), solved))
+
+            status = {}
+            for p in problems:
+                problem_files = [f for f in files_lower if f.startswith(p)]
+                if any("no" in f for f in problem_files):
+                    status[p] = "❌"  # 実装済みだが未AC（noが含まれる）
+                elif any(f == f"{p}.java" for f in problem_files):
+                    status[p] = "✅"  # AC済み（no含まない .java）
+                else:
+                    status[p] = "☐"  # 未実装
+
+            contests.append((folder.upper(), status))
 
     # Markdown 出力
     lines = ["## ✅ AtCoder ABC進捗一覧（A〜D問題）\n"]
-    for name, solved in contests:
-        if all(solved.values()):
+    for name, status in contests:
+        if all(v == "✅" for v in status.values()):
             lines.append(f"- [x] {name}（A〜D）")
         else:
             lines.append(f"- [ ] {name}")
             for p in ['a', 'b', 'c', 'd']:
-                mark = 'x' if solved[p] else ' '
-                lines.append(f"  - [{mark}] {p.upper()}")
+                symbol = "x" if status[p] == "✅" else " "  # GitHubの [x] or [ ]
+                label = f"（{status[p]}）" if status[p] != "✅" else ""
+                lines.append(f"  - [{symbol}] {p.upper()} {label}")
 
     with open(os.path.join(base_path, output_file), 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines))
