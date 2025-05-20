@@ -7,7 +7,7 @@ on:
       - 'update_readme.py'
       - '.github/workflows/update_progress.yml'
   schedule:
-    - cron: '0 0 * * *'       # 毎日 0:00 に実行
+    - cron: '0 21 * * *'       # 毎日 日本時間 朝6時に実行
   workflow_dispatch:          # 手動実行も許可
 
 permissions:
