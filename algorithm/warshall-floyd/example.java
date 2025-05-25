@@ -1,6 +1,6 @@
 import java.util.Arrays;
 
-public class WarshallFloyd {
+public class example {
     static final int INF = 1_000_000_000; // 到達不可能な距離はINFで表す
     static int[][] dist;
 
