@@ -1,6 +1,8 @@
 import java.util.*;
 import java.math.*;
 
+            // List で　kind分作るかもそれから　rotateするかも
+
 public class Main {
     public static void main(String[] args) {
         try (Scanner sc = new Scanner(System.in)) {
