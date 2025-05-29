@@ -1,6 +1,12 @@
 import java.util.*;
 import java.math.*;
 
+/*方針(２通り)
+*
+*１、DFSを使用する
+*２、単純にクロスの中心から、４方向に伸びた５つの＃を認識させカウントする
+*/
+
 public class Main {
     boolean[][] visited;
     int[][] grid;
