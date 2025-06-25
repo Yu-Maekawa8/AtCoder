@@ -1,0 +1,129 @@
+name: Sync AtCoder Submissions
+
+on:
+  schedule:
+    - cron: '0 22 * * *'       # 毎日 日本時間 朝7時に実行（進捗更新の1時間後）
+  workflow_dispatch:          # 手動実行も許可
+    inputs:
+      days_back:
+        description: '何日前まで遡って同期するか'
+        required: false
+        default: '7'
+        type: string
+      full_history:
+        description: '全履歴同期を実行するか（初回セットアップ用）'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  sync-submissions:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml
+          
+      - name: Sync AtCoder submissions
+        id: sync
+        env:
+          ATCODER_USER_ID: Y_maekawa
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ github.event.inputs.full_history }}" == "true" ]; then
+            EXTRA_ARGS="--all-history"
+            echo "🔄 全履歴同期モードで実行"
+          else
+            EXTRA_ARGS="--days-back ${{ github.event.inputs.days_back || '7' }}"
+            echo "📅 過去${{ github.event.inputs.days_back || '7' }}日間の同期"
+          fi
+          
+          python auto_sync_submissions.py $EXTRA_ARGS > sync_output.txt 2>&1
+          
+          # 同期結果を確認
+          if grep -q "同期完了" sync_output.txt; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            # 新しいファイルの数を取得
+            NEW_FILES=$(git status --porcelain | grep "^??" | wc -l)
+            MODIFIED_FILES=$(git status --porcelain | grep "^.M" | wc -l)
+            echo "new_files=$NEW_FILES" >> $GITHUB_OUTPUT
+            echo "modified_files=$MODIFIED_FILES" >> $GITHUB_OUTPUT
+            
+            # コミットメッセージを生成
+            if [ $NEW_FILES -gt 0 ] && [ $MODIFIED_FILES -gt 0 ]; then
+              COMMIT_MSG="🎉 AtCoder AC同期: ${NEW_FILES}個の新規ファイル, ${MODIFIED_FILES}個の更新"
+            elif [ $NEW_FILES -gt 0 ]; then
+              COMMIT_MSG="🎉 AtCoder AC同期: ${NEW_FILES}個の新規ファイル"
+            else
+              COMMIT_MSG="📝 AtCoder進捗更新"
+            fi
+            echo "commit_message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # ログを出力
+          cat sync_output.txt
+          
+      - name: Update progress after sync
+        if: steps.sync.outputs.has_changes == 'true'
+        run: python update_readme.py
+        
+      - name: Commit and push changes
+        if: steps.sync.outputs.has_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # すべての変更を追加
+          git add .
+          
+          # コミットメッセージを設定
+          COMMIT_MSG="${{ steps.sync.outputs.commit_message }}"
+          
+          # 変更があればコミット
+          if ! git diff --cached --quiet; then
+            git commit -m "$COMMIT_MSG"
+            git push
+            echo "✅ 変更をコミット・プッシュしました: $COMMIT_MSG"
+          else
+            echo "📝 コミットする変更がありませんでした"
+          fi
+          
+      - name: Create summary
+        if: always()
+        run: |
+          echo "## 🚀 AtCoder提出同期結果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.sync.outputs.has_changes }}" == "true" ]; then
+            echo "✅ **同期成功**" >> $GITHUB_STEP_SUMMARY
+            echo "- 新規ファイル: ${{ steps.sync.outputs.new_files }}個" >> $GITHUB_STEP_SUMMARY
+            echo "- 更新ファイル: ${{ steps.sync.outputs.modified_files }}個" >> $GITHUB_STEP_SUMMARY
+            echo "- コミットメッセージ: \`${{ steps.sync.outputs.commit_message }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📝 **新しいAC提出はありませんでした**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 実行ログ" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat sync_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
