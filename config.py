@@ -3,8 +3,8 @@
 # AtCoderのユーザーID（必須）
 ATCODER_USER_ID = "Y_maekawa"
 
-# 自動同期する日数（デフォルト：7日）
-DEFAULT_DAYS_BACK = 7
+# 自動同期する日数
+DEFAULT_DAYS_BACK = 1
 
 # 対応言語とファイル拡張子
 SUPPORTED_LANGUAGES = {
