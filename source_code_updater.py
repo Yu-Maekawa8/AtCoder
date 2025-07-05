@@ -365,9 +365,6 @@ class SourceCodeUpdater:
                 updated_count += 1
                 print(f"   🎉 更新成功 ({updated_count})")
         
-            # レート制限対策
-            time.sleep(1)
-    
         print(f"\n📈 更新完了: {updated_count}ファイル")
 
     def get_source_code_from_url(self, submission_url):
@@ -794,11 +791,760 @@ class SourceCodeUpdater:
         except Exception as e:
             print(f"❌ エラー: {e}")
 
-def main():
-    print("🚀 AtCoder ソースコード自動更新ツール（AC・非AC対応）")
-    print("=" * 60)
+    def get_contest_range_input(self):
+        """コンテスト範囲の入力を取得"""
+        print("📋 コンテスト範囲を指定してください")
+        print("=" * 40)
+        
+        try:
+            # 開始コンテスト
+            start_input = input("開始コンテスト番号（例: 200）: ").strip()
+            if not start_input.isdigit():
+                print("❌ 無効な開始コンテスト番号です")
+                return None, None
+            start_contest = int(start_input)
+            
+            # 終了コンテスト
+            end_input = input("終了コンテスト番号（例: 210）: ").strip()
+            if not end_input.isdigit():
+                print("❌ 無効な終了コンテスト番号です")
+                return None, None
+            end_contest = int(end_input)
+            
+            # 範囲チェック
+            if start_contest > end_contest:
+                print("❌ 開始コンテストが終了コンテストより大きいです")
+                return None, None
+            
+            if end_contest - start_contest > 50:
+                print("❌ 範囲が大きすぎます（最大50コンテスト）")
+                return None, None
+            
+            print(f"✅ 範囲設定: ABC{start_contest} ～ ABC{end_contest}")
+            return start_contest, end_contest
+            
+        except ValueError:
+            print("❌ 無効な入力です")
+            return None, None
+
+    def get_submissions_by_contest_range(self, start_contest, end_contest):
+        """指定コンテスト範囲の提出データを取得"""
+        print(f"🔍 ABC{start_contest}～ABC{end_contest}の提出データを取得中...")
+        
+        try:
+            url = f"https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user={self.user_id}&from_second=0"
+            response = self.session.get(url, timeout=30)
+            
+            if response.status_code != 200:
+                print(f"❌ API取得失敗: {response.status_code}")
+                return []
+            
+            submissions = response.json()
+            print(f"✅ 全提出データ取得: {len(submissions)}件")
+            
+            # 指定範囲のABC提出をフィルタリング
+            range_submissions = []
+            for submission in submissions:
+                problem_id = submission.get('problem_id', '')
+                
+                # ABC形式の問題のみ対象
+                if problem_id.startswith('abc'):
+                    parts = problem_id.split('_')
+                    if len(parts) == 2:
+                        contest_part = parts[0]  # abc213
+                        contest_num = contest_part[3:]  # 213
+                        
+                        if contest_num.isdigit():
+                            contest_number = int(contest_num)
+                            # 指定範囲内かチェック
+                            if start_contest <= contest_number <= end_contest:
+                                submission_id = submission.get('id')
+                                contest_id = contest_part
+                                submission_url = f"https://atcoder.jp/contests/{contest_id}/submissions/{submission_id}"
+                                
+                                submission['submission_url'] = submission_url
+                                range_submissions.append(submission)
+            
+            print(f"✅ ABC{start_contest}～ABC{end_contest}の提出: {len(range_submissions)}件")
+            
+            # 結果別統計を表示
+            result_stats = {}
+            for submission in range_submissions:
+                result = submission.get('result', 'Unknown')
+                result_stats[result] = result_stats.get(result, 0) + 1
+            
+            print(f"📊 結果別統計:")
+            for result, count in sorted(result_stats.items()):
+                print(f"  {result}: {count}件")
+            
+            # コンテスト別統計を表示
+            contest_stats = {}
+            for submission in range_submissions:
+                problem_id = submission['problem_id']
+                contest_num = int(problem_id.split('_')[0][3:])
+                if contest_num not in contest_stats:
+                    contest_stats[contest_num] = {'AC': 0, 'total': 0}
+                
+                contest_stats[contest_num]['total'] += 1
+                if submission.get('result') == 'AC':
+                    contest_stats[contest_num]['AC'] += 1
+            
+            print(f"📊 コンテスト別統計:")
+            for contest_num in sorted(contest_stats.keys()):
+                stats = contest_stats[contest_num]
+                print(f"  ABC{contest_num}: AC {stats['AC']}/{stats['total']} 件")
+        
+            return range_submissions
+
+        except Exception as e:
+            print(f"❌ 提出データ取得エラー: {e}")
+            return []
+
+    def create_files_by_contest_range(self, start_contest, end_contest):
+        """指定コンテスト範囲の空ファイルを作成"""
+        print(f"📁 ABC{start_contest}～ABC{end_contest}の空ファイル作成")
+        print("=" * 60)
+        
+        # 指定範囲の提出データを取得
+        range_submissions = self.get_submissions_by_contest_range(start_contest, end_contest)
+        if not range_submissions:
+            print("❌ 指定範囲の提出データが取得できませんでした")
+            return 0
+        
+        # 問題ID別に最新の提出を取得
+        latest_submissions = {}
+        for submission in range_submissions:
+            problem_id = submission['problem_id']
+            epoch_second = submission.get('epoch_second', 0)
+            
+            if problem_id not in latest_submissions or epoch_second > latest_submissions[problem_id].get('epoch_second', 0):
+                latest_submissions[problem_id] = submission
     
-    choice = input("実行モードを選択してください:\n1. 単一ファイルテスト\n2. 空ファイル自動作成（AC・非AC含む）\n3. 10件制限更新（AC・非AC含む）\n4. 全件更新（AC・非AC含む）\n5. 最新コンテスト確認\n選択 (1-5): ")
+        created_folders = set()
+        created_files = []
+        
+        for problem_id, submission in latest_submissions.items():
+            parts = problem_id.split('_')
+            
+            if len(parts) == 2:
+                contest_part = parts[0]  # abc213
+                problem_part = parts[1]  # a
+                result = submission.get('result', '')
+                
+                contest_num = contest_part[3:]
+                if contest_num.isdigit():
+                    folder_name = f'ABC{contest_num}'
+                    problem_letter = problem_part.upper()
+                    
+                    # ファイル名を結果に応じて決定
+                    if result == 'AC':
+                        file_name = f'{problem_letter}.java'
+                    else:
+                        file_name = f'{problem_letter}_no.java'
+                    
+                    file_path = os.path.join(folder_name, file_name)
+                    
+                    # フォルダ作成
+                    if not os.path.exists(folder_name):
+                        os.makedirs(folder_name, exist_ok=True)
+                        created_folders.add(folder_name)
+                        print(f"📂 フォルダ作成: {folder_name}")
+                    
+                    # ファイルが存在しない場合のみ作成
+                    if not os.path.exists(file_path):
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write('')  # 空ファイル作成
+                        created_files.append(file_path)
+                        
+                        # 結果に応じてメッセージを変更
+                        if result == 'AC':
+                            print(f"📝 AC問題ファイル作成: {file_path}")
+                        else:
+                            print(f"📝 非AC問題ファイル作成: {file_path} (結果: {result})")
+    
+        print(f"\n📈 作成結果:")
+        print(f"  フォルダ: {len(created_folders)}個")
+        print(f"  ファイル: {len(created_files)}個")
+        print(f"  対象コンテスト: ABC{start_contest}～ABC{end_contest}")
+        
+        return len(created_files)
+
+    def update_files_by_contest_range(self, start_contest, end_contest, max_updates=1000):
+        """指定コンテスト範囲のファイルを更新"""
+        print(f"🔄 ABC{start_contest}～ABC{end_contest}のファイル更新開始")
+        print("=" * 70)
+        
+        # 指定範囲の提出データを取得
+        range_submissions = self.get_submissions_by_contest_range(start_contest, end_contest)
+        if not range_submissions:
+            print("❌ 指定範囲の提出データが取得できませんでした")
+            return
+        
+        # 問題ID別に最新の提出を取得
+        latest_submissions = {}
+        for submission in range_submissions:
+            problem_id = submission['problem_id']
+            epoch_second = submission.get('epoch_second', 0)
+            
+            if problem_id not in latest_submissions or epoch_second > latest_submissions[problem_id].get('epoch_second', 0):
+                latest_submissions[problem_id] = submission
+    
+        print(f"📊 ユニーク問題数: {len(latest_submissions)}件")
+        
+        # 結果別統計
+        result_stats = {}
+        for submission in latest_submissions.values():
+            result = submission.get('result', 'Unknown')
+            result_stats[result] = result_stats.get(result, 0) + 1
+        
+        print(f"📊 結果別統計:")
+        for result, count in sorted(result_stats.items()):
+            print(f"  {result}: {count}件")
+        
+        # 更新処理
+        updated_count = 0
+        for problem_id, submission in latest_submissions.items():
+            if updated_count >= max_updates:
+                print(f"⚠️  制限により{max_updates}件で停止")
+                break
+            
+            # 問題IDからフォルダとファイルを特定
+            parts = problem_id.split('_')
+            if len(parts) != 2:
+                continue
+                
+            contest_part = parts[0]  # abc213
+            problem_part = parts[1]  # a
+            result = submission.get('result', '')
+            
+            contest_num = contest_part[3:]
+            if not contest_num.isdigit():
+                continue
+            
+            folder_name = f'ABC{contest_num}'
+            problem_letter = problem_part.upper()
+            
+            # ファイル名を結果に応じて決定
+            if result == 'AC':
+                file_name = f'{problem_letter}.java'
+            else:
+                file_name = f'{problem_letter}_no.java'
+            
+            file_path = os.path.join(folder_name, file_name)
+            
+            # フォルダとファイルの存在確認
+            if not os.path.exists(folder_name) or not os.path.exists(file_path):
+                continue
+            
+            print(f"\n🎯 処理中: {problem_id} ({result}) -> {file_path}")
+            
+            # ソースコード取得
+            source_code = self.get_source_code_from_url(submission['submission_url'])
+            if not source_code:
+                print(f"   ⚠️  ソースコード取得失敗、スキップ")
+                continue
+            
+            # ファイル更新
+            if self.update_empty_file_with_result(file_path, source_code, submission):
+                updated_count += 1
+                print(f"   🎉 更新成功 ({updated_count})")
+        
+        print(f"\n📈 更新完了: {updated_count}ファイル")
+        print(f"📁 対象範囲: ABC{start_contest}～ABC{end_contest}")
+
+    def analyze_contest_submissions(self, min_contest=None):
+        """コンテスト別の提出状況を詳細分析"""
+        if min_contest is None:
+            latest_contest = self.get_latest_contest_number()
+            min_contest = max(200, latest_contest - 100)
+        
+        print(f"📊 ABC{min_contest}以降のコンテスト別提出状況分析")
+        print("=" * 70)
+        
+        # すべての提出データを取得
+        all_submissions = self.get_all_submissions_with_urls(min_contest)
+        if not all_submissions:
+            print("❌ 提出データが取得できませんでした")
+            return
+        
+        # コンテスト別に分析
+        contest_analysis = {}
+        
+        for submission in all_submissions:
+            problem_id = submission['problem_id']
+            parts = problem_id.split('_')
+            
+            if len(parts) == 2:
+                contest_part = parts[0]  # abc213
+                problem_part = parts[1]  # a
+                result = submission.get('result', 'Unknown')
+                
+                contest_num = contest_part[3:]
+                if contest_num.isdigit():
+                    contest_number = int(contest_num)
+                    
+                    if contest_number not in contest_analysis:
+                        contest_analysis[contest_number] = {
+                            'AC': 0,
+                            'WA': 0,
+                            'TLE': 0,
+                            'RE': 0,
+                            'CE': 0,
+                            'MLE': 0,
+                            'OLE': 0,
+                            'IE': 0,
+                            'WJ': 0,
+                            'Other': 0,
+                            'total': 0,
+                            'problems': set(),
+                            'ac_problems': set(),
+                            'submissions_detail': []
+                        }
+                    
+                    # 結果別カウント
+                    if result == 'AC':
+                        contest_analysis[contest_number]['AC'] += 1
+                        contest_analysis[contest_number]['ac_problems'].add(problem_part.upper())
+                    elif result == 'WA':
+                        contest_analysis[contest_number]['WA'] += 1
+                    elif result == 'TLE':
+                        contest_analysis[contest_number]['TLE'] += 1
+                    elif result == 'RE':
+                        contest_analysis[contest_number]['RE'] += 1
+                    elif result == 'CE':
+                        contest_analysis[contest_number]['CE'] += 1
+                    elif result == 'MLE':
+                        contest_analysis[contest_number]['MLE'] += 1
+                    elif result == 'OLE':
+                        contest_analysis[contest_number]['OLE'] += 1
+                    elif result == 'IE':
+                        contest_analysis[contest_number]['IE'] += 1
+                    elif result == 'WJ':
+                        contest_analysis[contest_number]['WJ'] += 1
+                    else:
+                        contest_analysis[contest_number]['Other'] += 1
+                    
+                    contest_analysis[contest_number]['total'] += 1
+                    contest_analysis[contest_number]['problems'].add(problem_part.upper())
+                    
+                    # 詳細情報を保存
+                    contest_analysis[contest_number]['submissions_detail'].append({
+                        'problem': problem_part.upper(),
+                        'result': result,
+                        'submission_date': self.format_timestamp(submission.get('epoch_second', 0)),
+                        'execution_time': submission.get('execution_time', 0)
+                    })
+        
+        # 結果表示
+        print(f"📈 コンテスト別提出状況（ABC{min_contest}以降）")
+        print("-" * 70)
+        
+        # ソート（コンテスト番号順）
+        sorted_contests = sorted(contest_analysis.keys())
+        
+        total_contests = len(sorted_contests)
+        total_ac_problems = 0
+        total_other_problems = 0
+        
+        for contest_num in sorted_contests:
+            stats = contest_analysis[contest_num]
+            ac_count = stats['AC']
+            other_count = stats['total'] - stats['AC']
+            unique_problems = len(stats['problems'])
+            ac_problems = len(stats['ac_problems'])
+            
+            total_ac_problems += ac_count
+            total_other_problems += other_count
+            
+            # 基本情報
+            print(f"ABC{contest_num:03d}: AC {ac_count:2d}問 | それ以外 {other_count:2d}問 | 計 {stats['total']:2d}提出")
+            
+            # 詳細結果
+            details = []
+            if stats['WA'] > 0:
+                details.append(f"WA:{stats['WA']}")
+            if stats['TLE'] > 0:
+                details.append(f"TLE:{stats['TLE']}")
+            if stats['RE'] > 0:
+                details.append(f"RE:{stats['RE']}")
+            if stats['CE'] > 0:
+                details.append(f"CE:{stats['CE']}")
+            if stats['MLE'] > 0:
+                details.append(f"MLE:{stats['MLE']}")
+            if stats['Other'] > 0:
+                details.append(f"Other:{stats['Other']}")
+            
+            if details:
+                print(f"        詳細: {' | '.join(details)}")
+            
+            # AC済み問題一覧
+            if ac_problems > 0:
+                ac_list = sorted(list(stats['ac_problems']))
+                print(f"        AC問題: {' '.join(ac_list)}")
+            
+            print()
+        
+        # 総合統計
+        print("=" * 70)
+        print(f"📊 総合統計")
+        print(f"  対象コンテスト数: {total_contests}個")
+        print(f"  AC問題数: {total_ac_problems}問")
+        print(f"  それ以外問題数: {total_other_problems}問")
+        print(f"  総提出数: {total_ac_problems + total_other_problems}件")
+        
+        # 平均統計
+        if total_contests > 0:
+            avg_ac = total_ac_problems / total_contests
+            avg_other = total_other_problems / total_contests
+            print(f"  平均AC問題数/コンテスト: {avg_ac:.1f}問")
+            print(f"  平均それ以外問題数/コンテスト: {avg_other:.1f}問")
+        
+        # 最新10コンテストの詳細
+        print(f"\n🏆 最新10コンテストの詳細")
+        print("-" * 70)
+        
+        latest_10 = sorted_contests[-10:] if len(sorted_contests) >= 10 else sorted_contests
+        for contest_num in reversed(latest_10):
+            stats = contest_analysis[contest_num]
+            ac_count = stats['AC']
+            other_count = stats['total'] - stats['AC']
+            
+            print(f"ABC{contest_num}: AC {ac_count}問 | それ以外 {other_count}問")
+            
+            # 最新の提出を表示
+            recent_submissions = sorted(stats['submissions_detail'], 
+                                  key=lambda x: x['submission_date'], reverse=True)[:3]
+            
+            for sub in recent_submissions:
+                exec_time = f"{sub['execution_time']}ms" if sub['execution_time'] else "N/A"
+                print(f"  {sub['problem']} ({sub['result']}) - {sub['submission_date']} - {exec_time}")
+        
+        return contest_analysis
+
+    def show_contest_range_analysis(self):
+        """コンテスト範囲を指定して分析"""
+        print("📊 コンテスト範囲指定分析")
+        print("=" * 50)
+        
+        # 範囲入力
+        start_contest, end_contest = self.get_contest_range_input()
+        if not start_contest or not end_contest:
+            print("❌ 範囲指定が無効です")
+            return
+        
+        # 指定範囲の提出データを取得
+        range_submissions = self.get_submissions_by_contest_range(start_contest, end_contest)
+        if not range_submissions:
+            print("❌ 指定範囲の提出データが取得できませんでした")
+            return
+        
+        # 分析実行
+        self.analyze_contest_submissions(start_contest)
+
+    def debug_submission_data(self):
+        """提出データの詳細デバッグ"""
+        print("🔍 提出データ詳細デバッグ")
+        print("=" * 50)
+        
+        try:
+            url = f"https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user={self.user_id}&from_second=0"
+            response = self.session.get(url, timeout=30)
+            
+            if response.status_code != 200:
+                print(f"❌ API取得失敗: {response.status_code}")
+                return
+            
+            submissions = response.json()
+            print(f"✅ 全提出データ取得: {len(submissions)}件")
+            
+            # ABC提出のみ抽出して詳細確認
+            abc_submissions = []
+            contest_numbers = set()
+            
+            for submission in submissions:
+                problem_id = submission.get('problem_id', '')
+                
+                if problem_id.startswith('abc'):
+                    parts = problem_id.split('_')
+                    if len(parts) == 2:
+                        contest_part = parts[0]  # abc213
+                        contest_num = contest_part[3:]  # 213
+                        
+                        if contest_num.isdigit():
+                            contest_number = int(contest_num)
+                            contest_numbers.add(contest_number)
+                            abc_submissions.append({
+                                'problem_id': problem_id,
+                                'contest_num': contest_number,
+                                'result': submission.get('result', ''),
+                                'submission_date': self.format_timestamp(submission.get('epoch_second', 0))
+                            })
+            
+            print(f"📊 ABC提出数: {len(abc_submissions)}件")
+            
+            # コンテスト番号の範囲を確認
+            if contest_numbers:
+                min_contest = min(contest_numbers)
+                max_contest = max(contest_numbers)
+                print(f"📊 実際のコンテスト範囲: ABC{min_contest} ～ ABC{max_contest}")
+                
+                # 範囲別統計
+                ranges = [
+                    (200, 250, "ABC200-250"),
+                    (251, 300, "ABC251-300"),
+                    (301, 349, "ABC301-349"),
+                    (350, 400, "ABC350-400"),
+                    (401, 450, "ABC401-450")
+                ]
+                
+                print(f"\n📊 範囲別統計:")
+                for start, end, label in ranges:
+                    count = len([c for c in contest_numbers if start <= c <= end])
+                    if count > 0:
+                        print(f"  {label}: {count}コンテスト")
+                
+                # 最新20コンテストの提出状況
+                print(f"\n🏆 最新20コンテストの提出状況:")
+                sorted_contests = sorted(contest_numbers, reverse=True)[:20]
+                
+                for contest_num in sorted_contests:
+                    contest_submissions = [s for s in abc_submissions if s['contest_num'] == contest_num]
+                    ac_count = len([s for s in contest_submissions if s['result'] == 'AC'])
+                    total_count = len(contest_submissions)
+                    
+                    print(f"  ABC{contest_num}: AC {ac_count}問 | 計 {total_count}提出")
+                    
+                    # 最新の提出を表示
+                    latest_sub = max(contest_submissions, key=lambda x: x['submission_date'])
+                    print(f"    最新提出: {latest_sub['problem_id']} ({latest_sub['result']}) - {latest_sub['submission_date']}")
+            
+            else:
+                print("❌ ABC提出データが見つかりません")
+                
+        except Exception as e:
+            print(f"❌ エラー: {e}")
+
+    def process_contest_range_interactive(self):
+        """コンテスト範囲選択の対話式処理"""
+        print("📋 コンテスト範囲選択モード")
+        print("=" * 50)
+        
+        # 範囲入力
+        start_contest, end_contest = self.get_contest_range_input()
+        if not start_contest or not end_contest:
+            print("❌ 範囲指定が無効です")
+            return
+        
+        # 処理選択
+        print(f"\n🎯 ABC{start_contest}～ABC{end_contest}の処理を選択してください:")
+        action = input("1. 空ファイル作成のみ\n2. 空ファイル作成+コード更新\n3. 既存ファイルの更新のみ\n4. 分析のみ ⭐NEW⭐\n選択 (1-4): ")
+        
+        if action == '1':
+            # 空ファイル作成のみ
+            created_count = self.create_files_by_contest_range(start_contest, end_contest)
+            print(f"\n✅ 完了: {created_count}個のファイルを作成しました")
+        
+        elif action == '2':
+            # 空ファイル作成+コード更新
+            created_count = self.create_files_by_contest_range(start_contest, end_contest)
+            if created_count > 0:
+                print(f"\n🎯 続けてコード更新を実行しますか？ (y/n): ", end="")
+                if input().lower() == 'y':
+                    self.update_files_by_contest_range(start_contest, end_contest, max_updates=1000)
+            else:
+                print("❌ 作成されたファイルがないため、更新をスキップします")
+                
+        elif action == '3':
+            # 既存ファイルの更新のみ
+            self.update_files_by_contest_range(start_contest, end_contest, max_updates=1000)
+            
+        elif action == '4':
+            # 分析のみ
+            self.analyze_contest_range_detailed(start_contest, end_contest)
+            
+        else:
+            print("❌ 無効な選択です")
+
+    def analyze_contest_range_detailed(self, start_contest, end_contest):
+        """指定コンテスト範囲の詳細分析"""
+        print(f"📊 ABC{start_contest}～ABC{end_contest}の詳細分析")
+        print("=" * 70)
+        
+        # 指定範囲の提出データを取得
+        range_submissions = self.get_submissions_by_contest_range(start_contest, end_contest)
+        if not range_submissions:
+            print("❌ 指定範囲の提出データが取得できませんでした")
+            return
+        
+        # コンテスト別に分析
+        contest_analysis = {}
+        
+        for submission in range_submissions:
+            problem_id = submission['problem_id']
+            parts = problem_id.split('_')
+            
+            if len(parts) == 2:
+                contest_part = parts[0]  # abc300
+                problem_part = parts[1]  # a
+                result = submission.get('result', 'Unknown')
+                
+                contest_num = contest_part[3:]
+                if contest_num.isdigit():
+                    contest_number = int(contest_num)
+                    
+                    if contest_number not in contest_analysis:
+                        contest_analysis[contest_number] = {
+                            'AC': 0,
+                            'WA': 0,
+                            'TLE': 0,
+                            'RE': 0,
+                            'CE': 0,
+                            'MLE': 0,
+                            'OLE': 0,
+                            'IE': 0,
+                            'WJ': 0,
+                            'Other': 0,
+                            'total': 0,
+                            'problems': set(),
+                            'ac_problems': set(),
+                            'submissions_detail': []
+                        }
+                    
+                    # 結果別カウント
+                    if result == 'AC':
+                        contest_analysis[contest_number]['AC'] += 1
+                        contest_analysis[contest_number]['ac_problems'].add(problem_part.upper())
+                    elif result == 'WA':
+                        contest_analysis[contest_number]['WA'] += 1
+                    elif result == 'TLE':
+                        contest_analysis[contest_number]['TLE'] += 1
+                    elif result == 'RE':
+                        contest_analysis[contest_number]['RE'] += 1
+                    elif result == 'CE':
+                        contest_analysis[contest_number]['CE'] += 1
+                    elif result == 'MLE':
+                        contest_analysis[contest_number]['MLE'] += 1
+                    elif result == 'OLE':
+                        contest_analysis[contest_number]['OLE'] += 1
+                    elif result == 'IE':
+                        contest_analysis[contest_number]['IE'] += 1
+                    elif result == 'WJ':
+                        contest_analysis[contest_number]['WJ'] += 1
+                    else:
+                        contest_analysis[contest_number]['Other'] += 1
+                    
+                    contest_analysis[contest_number]['total'] += 1
+                    contest_analysis[contest_number]['problems'].add(problem_part.upper())
+                    
+                    # 詳細情報を保存
+                    contest_analysis[contest_number]['submissions_detail'].append({
+                        'problem': problem_part.upper(),
+                        'result': result,
+                        'submission_date': self.format_timestamp(submission.get('epoch_second', 0)),
+                        'execution_time': submission.get('execution_time', 0)
+                    })
+        
+        # 結果表示
+        print(f"📈 コンテスト別提出状況（ABC{start_contest}～ABC{end_contest}）")
+        print("-" * 70)
+        
+        # ソート（コンテスト番号順）
+        sorted_contests = sorted(contest_analysis.keys())
+        
+        total_contests = len(sorted_contests)
+        total_ac_problems = 0
+        total_other_problems = 0
+        
+        for contest_num in sorted_contests:
+            stats = contest_analysis[contest_num]
+            ac_count = stats['AC']
+            other_count = stats['total'] - stats['AC']
+            unique_problems = len(stats['problems'])
+            ac_problems = len(stats['ac_problems'])
+            
+            total_ac_problems += ac_count
+            total_other_problems += other_count
+            
+            # 基本情報
+            print(f"ABC{contest_num:03d}: AC {ac_count:2d}問 | それ以外 {other_count:2d}問 | 計 {stats['total']:2d}提出")
+            
+            # 詳細結果
+            details = []
+            if stats['WA'] > 0:
+                details.append(f"WA:{stats['WA']}")
+            if stats['TLE'] > 0:
+                details.append(f"TLE:{stats['TLE']}")
+            if stats['RE'] > 0:
+                details.append(f"RE:{stats['RE']}")
+            if stats['CE'] > 0:
+                details.append(f"CE:{stats['CE']}")
+            if stats['MLE'] > 0:
+                details.append(f"MLE:{stats['MLE']}")
+            if stats['Other'] > 0:
+                details.append(f"Other:{stats['Other']}")
+            
+            if details:
+                print(f"        詳細: {' | '.join(details)}")
+            
+            # AC済み問題一覧
+            if ac_problems > 0:
+                ac_list = sorted(list(stats['ac_problems']))
+                print(f"        AC問題: {' '.join(ac_list)}")
+            
+            print()
+        
+        # 総合統計
+        print("=" * 70)
+        print(f"📊 総合統計")
+        print(f"  対象コンテスト数: {total_contests}個")
+        print(f"  AC問題数: {total_ac_problems}問")
+        print(f"  それ以外問題数: {total_other_problems}問")
+        print(f"  総提出数: {total_ac_problems + total_other_problems}件")
+        
+        # 平均統計
+        if total_contests > 0:
+            avg_ac = total_ac_problems / total_contests
+            avg_other = total_other_problems / total_contests
+            print(f"  平均AC問題数/コンテスト: {avg_ac:.1f}問")
+            print(f"  平均それ以外問題数/コンテスト: {avg_other:.1f}問")
+        
+        # 最新10コンテストの詳細
+        print(f"\n🏆 最新10コンテストの詳細")
+        print("-" * 70)
+        
+        latest_10 = sorted_contests[-10:] if len(sorted_contests) >= 10 else sorted_contests
+        for contest_num in reversed(latest_10):
+            stats = contest_analysis[contest_num]
+            ac_count = stats['AC']
+            other_count = stats['total'] - stats['AC']
+            
+            print(f"ABC{contest_num}: AC {ac_count}問 | それ以外 {other_count}問")
+            
+            # 最新の提出を表示
+            recent_submissions = sorted(stats['submissions_detail'], 
+                                  key=lambda x: x['submission_date'], reverse=True)[:3]
+            
+            for sub in recent_submissions:
+                exec_time = f"{sub['execution_time']}ms" if sub['execution_time'] else "N/A"
+                print(f"  {sub['problem']} ({sub['result']}) - {sub['submission_date']} - {exec_time}")
+        
+        return contest_analysis
+
+def main():
+    print("🚀 AtCoder ソースコード自動更新ツール（デバッグ対応）")
+    print("=" * 70)
+    
+    choice = input("""実行モードを選択してください:
+1. 単一ファイルテスト
+2. 空ファイル自動作成（全範囲・AC非AC含む）
+3. 10件制限更新（全範囲・AC非AC含む）
+4. 全件更新（全範囲・AC非AC含む）
+5. 最新コンテスト確認
+6. コンテスト範囲選択処理
+7. コンテスト別提出状況分析
+8. 範囲指定コンテスト分析
+9. 提出データ詳細デバッグ ⭐NEW⭐
+選択 (1-9): """)
     
     if choice == '1':
         test_single_update()
@@ -817,6 +1563,18 @@ def main():
         updater.update_all_empty_files_in_range(max_updates=1000)
     elif choice == '5':
         test_latest_contest()
+    elif choice == '6':
+        updater = SourceCodeUpdater()
+        updater.process_contest_range_interactive()
+    elif choice == '7':
+        updater = SourceCodeUpdater()
+        updater.analyze_contest_submissions()
+    elif choice == '8':
+        updater = SourceCodeUpdater()
+        updater.show_contest_range_analysis()
+    elif choice == '9':
+        updater = SourceCodeUpdater()
+        updater.debug_submission_data()
     else:
         print("無効な選択です")
 
